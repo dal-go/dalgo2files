@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dal-go/dalgo/dal"
+	"github.com/dal-go/dalgo/recordset"
 	"io"
 	"os"
 	"path/filepath"
@@ -32,6 +33,9 @@ func NewDB(dirPath string, schemaDefinition SchemaDefinition) (db dal.DB, err er
 }
 
 type database struct {
+	// dal.NoConcurrency: file-backed store concurrency is unproven;
+	// the conservative default is correct until stress-tested.
+	dal.NoConcurrency
 	dirPath string
 	SchemaDefinition
 }
@@ -42,6 +46,10 @@ func (d database) ID() string {
 
 func (d database) Adapter() dal.Adapter {
 	return adapter{}
+}
+
+func (d database) Schema() dal.Schema {
+	return nil
 }
 
 // RunReadonlyTransaction: for file-based read operations, we don't support real transactions.
@@ -216,11 +224,10 @@ func (d database) GetMulti(ctx context.Context, records []dal.Record) error {
 	return firstErr
 }
 
-func (d database) QueryReader(_ context.Context, _ dal.Query) (dal.Reader, error) {
+func (d database) ExecuteQueryToRecordsReader(_ context.Context, _ dal.Query) (dal.RecordsReader, error) {
 	return nil, dal.ErrNotImplementedYet
 }
 
-func (d database) QueryAllRecords(ctx context.Context, query dal.Query) (records []dal.Record, err error) {
-	// Use helper to keep consistent behavior when QueryReader is implemented later.
-	return dal.NewQueryExecutor(d.QueryReader).QueryAllRecords(ctx, query)
+func (d database) ExecuteQueryToRecordsetReader(_ context.Context, _ dal.Query, _ ...recordset.Option) (dal.RecordsetReader, error) {
+	return nil, dal.ErrNotImplementedYet
 }
