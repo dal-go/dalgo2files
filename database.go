@@ -82,7 +82,7 @@ func (d database) individualFilePath(key *dal.Key) string {
 // Get loads a record by key according to schema definitions.
 func (d database) Get(_ context.Context, record dal.Record) error {
 	key := record.Key()
-	collectionDef := d.SchemaDefinition.GetCollectionDef(key)
+	collectionDef := d.GetCollectionDef(key)
 	// Ensure collection directory exists for read path (no creation). If not exists -> not found
 	switch collectionDef.StoreRecordsAs {
 	case StoreCollectionRecordsIndividualFiles:
@@ -112,7 +112,7 @@ func (d database) Get(_ context.Context, record dal.Record) error {
 			}
 			return record.SetError(err).Error()
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		dec := json.NewDecoder(f)
 		// Expect an array of objects: [{"id": <id>, "data": <record>}, ...]
 		tok, err := dec.Token()
@@ -162,7 +162,7 @@ func (d database) Get(_ context.Context, record dal.Record) error {
 }
 
 func (d database) Exists(_ context.Context, key *dal.Key) (bool, error) {
-	collectionDef := d.SchemaDefinition.GetCollectionDef(key)
+	collectionDef := d.GetCollectionDef(key)
 	switch collectionDef.StoreRecordsAs {
 	case StoreCollectionRecordsIndividualFiles:
 		if _, err := os.Stat(d.individualFilePath(key)); err != nil {
@@ -181,7 +181,7 @@ func (d database) Exists(_ context.Context, key *dal.Key) (bool, error) {
 			}
 			return false, err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		dec := json.NewDecoder(f)
 		// Expect array as above
 		tok, err := dec.Token()

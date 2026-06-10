@@ -22,7 +22,7 @@ func TestNewDB_DirectoryValidation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create temp dir: %v", err)
 		}
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		_, err = NewDB(tempDir, schemaDefinition{})
 		if err != nil {
@@ -35,8 +35,8 @@ func TestNewDB_DirectoryValidation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create temp file: %v", err)
 		}
-		defer os.Remove(tempFile.Name())
-		tempFile.Close()
+		defer func() { _ = os.Remove(tempFile.Name()) }()
+		_ = tempFile.Close()
 
 		_, err = NewDB(tempFile.Name(), schemaDefinition{})
 		if err == nil {
