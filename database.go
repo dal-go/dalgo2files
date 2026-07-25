@@ -5,13 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dal-go/dalgo/dal"
-	"github.com/dal-go/dalgo/recordset"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/dal-go/dalgo/dal"
+	"github.com/dal-go/dalgo/recordset"
+	dalrecord "github.com/dal-go/record"
 )
 
+// NewDB creates a file-backed dal.DB, sealed by dal.NewDB like every other
+// DALgo adapter. This driver has no working write path yet — every
+// RunReadwriteTransaction call returns dal.ErrNotImplementedYet before the
+// framework's BeforeSave pipeline would ever run — so sealing is a compile-time
+// formality here rather than a behaviour change.
 func NewDB(dirPath string, schemaDefinition SchemaDefinition) (db dal.DB, err error) {
 	if err = schemaDefinition.Validate(); err != nil {
 		return
@@ -25,10 +32,10 @@ func NewDB(dirPath string, schemaDefinition SchemaDefinition) (db dal.DB, err er
 	} else if !stat.IsDir() {
 		return nil, fmt.Errorf("path is not a directory: %s", dirPath)
 	}
-	db = database{
+	db = dal.NewDB(database{
 		dirPath:          dirPath,
 		SchemaDefinition: schemaDefinition,
-	}
+	})
 	return
 }
 
@@ -64,23 +71,23 @@ func (d database) RunReadwriteTransaction(_ context.Context, _ dal.RWTxWorker, _
 }
 
 // collectionDir returns absolute path to collection directory
-func (d database) collectionDir(key *dal.Key) string {
+func (d database) collectionDir(key *dalrecord.Key) string {
 	return filepath.Join(d.dirPath, key.Collection())
 }
 
 // singleFilePath returns path to single-file storage for a collection
-func (d database) singleFilePath(key *dal.Key) string {
+func (d database) singleFilePath(key *dalrecord.Key) string {
 	return filepath.Join(d.collectionDir(key), "records.json")
 }
 
 // individualFilePath returns path to a single-record file storage
-func (d database) individualFilePath(key *dal.Key) string {
+func (d database) individualFilePath(key *dalrecord.Key) string {
 	filename := fmt.Sprintf("%v.json", key.ID)
 	return filepath.Join(d.collectionDir(key), filename)
 }
 
 // Get loads a record by key according to schema definitions.
-func (d database) Get(_ context.Context, record dal.Record) error {
+func (d database) Get(_ context.Context, record dalrecord.Record) error {
 	key := record.Key()
 	collectionDef := d.GetCollectionDef(key)
 	// Ensure collection directory exists for read path (no creation). If not exists -> not found
@@ -96,7 +103,7 @@ func (d database) Get(_ context.Context, record dal.Record) error {
 			return record.SetError(err).Error()
 		}
 		// Allow accessing target data by marking no error temporarily
-		record.SetError(dal.ErrNoError)
+		record.SetError(nil) // nil normalizes to record.ErrNoError internally
 		target := record.Data()
 		if err = json.Unmarshal(data, target); err != nil {
 			return record.SetError(err).Error()
@@ -138,7 +145,7 @@ func (d database) Get(_ context.Context, record dal.Record) error {
 			}
 			if wid == idStr {
 				// Found, unmarshal data
-				record.SetError(dal.ErrNoError)
+				record.SetError(nil) // nil normalizes to record.ErrNoError internally
 				target := record.Data()
 				if v, ok := wrapper["data"]; ok {
 					if err = json.Unmarshal(v, target); err != nil {
@@ -161,7 +168,7 @@ func (d database) Get(_ context.Context, record dal.Record) error {
 	}
 }
 
-func (d database) Exists(_ context.Context, key *dal.Key) (bool, error) {
+func (d database) Exists(_ context.Context, key *dalrecord.Key) (bool, error) {
 	collectionDef := d.GetCollectionDef(key)
 	switch collectionDef.StoreRecordsAs {
 	case StoreCollectionRecordsIndividualFiles:
@@ -214,7 +221,7 @@ func (d database) Exists(_ context.Context, key *dal.Key) (bool, error) {
 	}
 }
 
-func (d database) GetMulti(ctx context.Context, records []dal.Record) error {
+func (d database) GetMulti(ctx context.Context, records []dalrecord.Record) error {
 	var firstErr error
 	for _, r := range records {
 		if err := d.Get(ctx, r); err != nil && firstErr == nil {

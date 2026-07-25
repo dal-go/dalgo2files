@@ -3,11 +3,12 @@ package dalgo2files
 import (
 	"errors"
 	"fmt"
-	"github.com/dal-go/dalgo/dal"
+
+	dalrecord "github.com/dal-go/record"
 )
 
 type SchemaDefinition interface {
-	GetCollectionDef(key *dal.Key) CollectionDef
+	GetCollectionDef(key *dalrecord.Key) CollectionDef
 	Validate() error
 }
 
@@ -19,7 +20,7 @@ type schemaDefinition struct {
 	Collections map[string]*CollectionDef
 }
 
-func (v schemaDefinition) GetCollectionDef(key *dal.Key) CollectionDef {
+func (v schemaDefinition) GetCollectionDef(key *dalrecord.Key) CollectionDef {
 	collectionDef := v.Collections[key.Collection()]
 	return *collectionDef
 }
