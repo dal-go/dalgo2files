@@ -1,6 +1,6 @@
 module github.com/dal-go/dalgo2files
 
-go 1.24.5
+go 1.27.0
 
 require (
 	github.com/dal-go/dalgo v0.64.2
