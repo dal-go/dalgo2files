@@ -2,6 +2,8 @@ package dalgo2files
 
 import (
 	"testing"
+
+	dalrecord "github.com/dal-go/record"
 )
 
 func TestCollectionDef_Validate(t *testing.T) {
@@ -131,6 +133,35 @@ func TestCollectionDef_Validate_EdgeCases(t *testing.T) {
 		expectedError := `unknown StoreRecordsAs: "   "`
 		if err.Error() != expectedError {
 			t.Errorf("expected error %q, got %q", expectedError, err.Error())
+		}
+	})
+}
+
+func TestSchemaDefinition(t *testing.T) {
+	t.Run("valid definition", func(t *testing.T) {
+		colDef := &CollectionDef{
+			StoreRecordsAs: StoreCollectionRecordsInSingleFile,
+			RecordFormat:   RecordFormatJSON,
+		}
+		schema := NewSchemaDefinition(map[string]*CollectionDef{
+			"users": colDef,
+		})
+		if err := schema.Validate(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		key := dalrecord.NewKeyWithID("users", "123")
+		got := schema.GetCollectionDef(key)
+		if got.StoreRecordsAs != StoreCollectionRecordsInSingleFile {
+			t.Errorf("expected %v, got %v", StoreCollectionRecordsInSingleFile, got.StoreRecordsAs)
+		}
+	})
+
+	t.Run("invalid collection in definition", func(t *testing.T) {
+		schema := NewSchemaDefinition(map[string]*CollectionDef{
+			"bad": {},
+		})
+		if err := schema.Validate(); err == nil {
+			t.Fatal("expected error for invalid collection definition")
 		}
 	})
 }

@@ -153,11 +153,7 @@ func (d database) Get(_ context.Context, record dalrecord.Record) error {
 					}
 					return nil
 				}
-				// If no "data" field, try unmarshal entire wrapper into target
-				if err = json.Unmarshal(wrapper["data"], target); err != nil {
-					return record.SetError(fmt.Errorf("record data not found in single-file entry for id=%s", idStr)).Error()
-				}
-				return nil
+				return record.SetError(fmt.Errorf("record data not found in single-file entry for id=%s", idStr)).Error()
 			}
 		}
 		// not found
